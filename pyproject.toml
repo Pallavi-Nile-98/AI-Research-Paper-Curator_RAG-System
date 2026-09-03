@@ -55,7 +55,8 @@ dev = [
 ]
 
 [project.urls]
-Repository = "https://github.com/Pallavi-Nile-98/ai-research-paper-curator"
+Repository = "https://github.com/Pallavi-Nile-98/AI-Research-Paper-Curator_RAG-System"
+Issues = "https://github.com/Pallavi-Nile-98/AI-Research-Paper-Curator_RAG-System/issues"
 
 # =============================================================================
 # Package discovery: source lives under src/, not the repository root.
