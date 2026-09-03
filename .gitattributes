@@ -1,0 +1,62 @@
+# Normalise line endings across platforms.
+#
+# Development happens on Windows (CRLF), while CI, Docker images and the AWS
+# deployment all run Linux (LF). Without this file Git guesses per-file, which
+# produces spurious whole-file diffs and can break LF-sensitive files such as
+# shell scripts baked into container images.
+#
+# `text=auto` stores everything as LF in the repository and checks out using the
+# platform default. Files that MUST stay LF even on Windows are pinned below.
+
+* text=auto
+
+# Source and configuration -- LF in the repository.
+*.py      text diff=python
+*.pyi     text diff=python
+*.toml    text
+*.cfg     text
+*.ini     text
+*.json    text
+*.md      text diff=markdown
+*.yml     text
+*.yaml    text
+*.sql     text
+*.tf      text
+*.tfvars  text
+*.ts      text
+*.tsx     text
+*.js      text
+*.jsx     text
+*.css     text
+*.html    text diff=html
+
+# Must be LF: these are executed inside Linux containers, where a trailing CR
+# makes the shebang unusable ("bad interpreter: /bin/sh^M").
+*.sh           text eol=lf
+Dockerfile     text eol=lf
+Dockerfile.*   text eol=lf
+.dockerignore  text eol=lf
+Makefile       text eol=lf
+*.env.example  text eol=lf
+
+# Windows-only scripts keep CRLF.
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary: never diff, never normalise.
+*.pdf           binary
+*.png           binary
+*.jpg           binary
+*.jpeg          binary
+*.gif           binary
+*.ico           binary
+*.woff          binary
+*.woff2         binary
+*.gguf          binary
+*.safetensors   binary
+*.bin           binary
+
+# Collapse lockfile noise in pull-request diffs.
+uv.lock              linguist-generated=true
+package-lock.json    linguist-generated=true
+requirements.lock.txt linguist-generated=true
