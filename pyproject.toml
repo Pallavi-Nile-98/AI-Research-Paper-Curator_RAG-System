@@ -1,0 +1,183 @@
+# =============================================================================
+# Build system: how Python turns this source tree into an installable package.
+# =============================================================================
+[build-system]
+requires = ["setuptools>=77.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+# =============================================================================
+# Project metadata (PEP 621). This is the single source of truth for
+# dependencies -- there is no requirements.txt.
+# =============================================================================
+[project]
+name = "paper-curator"
+version = "0.1.0"
+description = "Production-grade RAG system that ingests arXiv papers and answers technical questions with grounded, source-cited responses."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "Pallavi Nile", email = "nilepallavi98@gmail.com" }]
+keywords = [
+    "rag",
+    "retrieval-augmented-generation",
+    "arxiv",
+    "opensearch",
+    "hybrid-search",
+    "fastapi",
+    "llm",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
+]
+
+# Runtime dependencies. Phase 0 needs only configuration + logging; each later
+# phase adds its own group below rather than bloating this list up front.
+dependencies = [
+    "pydantic>=2.9,<3",
+    "pydantic-settings>=2.5,<3",
+    "structlog>=24.4",
+]
+
+[project.optional-dependencies]
+# Everything needed to develop, lint, type-check and test the project.
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=5.0",
+    "ruff>=0.7",
+    "mypy>=1.11",
+    "pre-commit>=3.8",
+    "pip-tools>=7.4",
+]
+
+[project.urls]
+Repository = "https://github.com/Pallavi-Nile-98/ai-research-paper-curator"
+
+# =============================================================================
+# Package discovery: source lives under src/, not the repository root.
+# See docs/adr/0005-src-layout-and-package-boundaries.md for why.
+# =============================================================================
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+# py.typed marks the package as typed (PEP 561) so mypy checks it for consumers.
+# Prompt templates are versioned data files that must ship inside the wheel.
+paper_curator = ["py.typed", "generation/prompts/**/*"]
+
+# =============================================================================
+# Ruff: linter + formatter (replaces flake8, isort, black, pyupgrade, bandit).
+# =============================================================================
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # pyflakes: undefined names, unused imports
+    "I",     # isort: import ordering
+    "N",     # pep8-naming
+    "UP",    # pyupgrade: modern syntax for the target version
+    "B",     # flake8-bugbear: likely bugs (mutable defaults, etc.)
+    "C4",    # flake8-comprehensions
+    "SIM",   # flake8-simplify
+    "ASYNC", # async/await correctness -- important for our async I/O
+    "S",     # flake8-bandit: security issues
+    "T20",   # flake8-print: no stray print() calls; we use structured logging
+    "RET",   # flake8-return
+    "PTH",   # flake8-use-pathlib: prefer pathlib over os.path
+    "ANN",   # flake8-annotations: enforce type hints
+    "D",     # pydocstyle: docstring conventions
+    "RUF",   # ruff-specific rules
+]
+ignore = [
+    # We require docstrings on modules and classes, but NOT on every function
+    # or method -- docstrings should add context, not restate the signature.
+    "D102", # missing docstring in public method
+    "D103", # missing docstring in public function
+    "D105", # missing docstring in magic method
+    "D107", # missing docstring in __init__
+    # Mutually exclusive with D211/D212, which we prefer.
+    "D203", # one blank line before class
+    "D213", # multi-line summary should start at the second line
+    "ANN401", # allow typing.Any where it is genuinely correct
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests may use bare asserts and skip docstrings/return annotations.
+"tests/**/*.py" = ["S101", "D100", "D104", "ANN201", "ANN001"]
+# Airflow DAG files are declarative configuration, not library code.
+"airflow/dags/**/*.py" = ["D100"]
+# Scripts are executable entry points, printing is their job. Subprocess use is
+# suppressed narrowly at the call site instead, so each instance stays justified.
+"scripts/**/*.py" = ["T20"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["paper_curator"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+# =============================================================================
+# mypy: static type checking. Strict mode from day one is far cheaper than
+# retrofitting types onto an existing codebase later.
+# =============================================================================
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests", "scripts"]
+strict = true
+warn_unreachable = true
+show_error_codes = true
+pretty = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+# Tests may omit annotations on test functions themselves.
+module = ["tests.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+# =============================================================================
+# pytest
+# =============================================================================
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = [
+    "-ra",                   # report reasons for all non-passing tests
+    "--strict-markers",      # unknown @pytest.mark.* becomes an error
+    "--strict-config",       # unknown config keys become an error
+    "--import-mode=importlib",
+]
+markers = [
+    "unit: fast, isolated, no external services required",
+    "integration: requires running services (Postgres, OpenSearch, Ollama)",
+    "evaluation: retrieval/generation quality experiments; slow, may load models",
+    "requires_ocr: requires the tesseract binary on PATH",
+]
+# Turn warnings into failures so deprecations are caught early, not at upgrade time.
+filterwarnings = ["error"]
+
+# =============================================================================
+# Coverage
+# =============================================================================
+[tool.coverage.run]
+source = ["src/paper_curator"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@(abc\\.)?abstractmethod",
+]
