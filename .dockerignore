@@ -1,0 +1,64 @@
+# Keep the Docker build context small and free of secrets.
+#
+# Everything listed here is excluded before the daemon receives the context.
+# This matters for speed (a 500 MB .venv would be uploaded on every build) and
+# for security (a .env copied into an image layer is readable by anyone who
+# pulls that image, even if a later layer deletes it).
+
+# Secrets -- must never enter an image layer.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Version control and CI
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# Virtual environments and caches -- rebuilt inside the image.
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Node -- installed inside the frontend image, never copied from the host.
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# Large or regenerable project data.
+data/
+models/
+*.pdf
+*.gguf
+*.safetensors
+volumes/
+pgdata/
+
+# Infrastructure state -- irrelevant to an application image.
+infrastructure/terraform/.terraform/
+*.tfstate
+*.tfstate.*
+
+# Local tooling and editors.
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Documentation is not needed at runtime; excluding it avoids rebuilding image
+# layers every time a README is edited.
+docs/
+*.md
+!README.md

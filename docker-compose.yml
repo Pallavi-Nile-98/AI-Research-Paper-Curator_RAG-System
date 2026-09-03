@@ -1,0 +1,235 @@
+# =============================================================================
+# Local development stack.
+#
+# There is deliberately no single "start everything" command. This machine has
+# 15.7 GB of RAM, and the full stack (Postgres + OpenSearch + Dashboards +
+# Ollama + Airflow) would need roughly 13 GB, leaving nothing for Windows.
+# Services are therefore grouped into PROFILES and you start only what you need.
+# See docs/adr/0006 for the reasoning.
+#
+#   Everyday development (Postgres + OpenSearch, ~3.8 GB):
+#       docker-compose up -d
+#
+#   Add the search UI when you need to inspect mappings (~+0.7 GB):
+#       docker-compose --profile search-ui up -d
+#
+#   Add the LLM when you need generation (~+3.0 GB):
+#       docker-compose --profile llm up -d
+#
+#   Stop, keeping data:            docker-compose down
+#   Stop and DELETE all data:      docker-compose down -v
+#   Watch health:                  docker-compose ps
+#
+# Note: `docker-compose` (hyphen) is used throughout rather than
+# `docker compose` (space), because the plugin form is not resolving on this
+# machine. Both invoke the same Compose v2 binary.
+#
+# Every value below falls back to a default, so the stack starts with no .env at
+# all. Copy .env.example to .env only when you want to override something.
+# =============================================================================
+
+name: paper-curator
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL -- pipeline state and relational truth.
+  # ---------------------------------------------------------------------------
+  # Owns papers, authors, ingestion runs, checkpoints, per-document processing
+  # status, failed documents, queries and feedback. Chosen over storing this in
+  # OpenSearch because ingestion needs transactions, foreign keys and unique
+  # constraints -- a search engine offers none of those. See ADR-0002.
+  postgres:
+    image: postgres:16.15-alpine
+    container_name: paper-curator-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-curator}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-curator_local_dev}
+      # The application calls this POSTGRES_DATABASE; the official image expects
+      # POSTGRES_DB. Mapped explicitly here so one .env drives both.
+      POSTGRES_DB: ${POSTGRES_DATABASE:-paper_curator}
+      # Keep the data directory one level down so the volume mount point itself
+      # is never the data root -- avoids "directory not empty" init failures.
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      # host:container. 5433 on the host because a native Postgres already holds
+      # 5432. Other containers still reach it as postgres:5432.
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # Scripts here run ONCE, only when the data directory is first created.
+      # Re-running them requires `docker-compose down -v`.
+      - ./infrastructure/docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # pg_isready checks the server accepts connections. Without this, a
+      # depends_on would proceed as soon as the container process starts, which
+      # is several seconds before Postgres is actually ready to serve.
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-curator} -d ${POSTGRES_DATABASE:-paper_curator}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      # Grace period on first boot while the database is being initialised;
+      # failures during this window do not count toward `retries`.
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # ---------------------------------------------------------------------------
+  # OpenSearch -- the retrieval engine.
+  # ---------------------------------------------------------------------------
+  # Stores each chunk once, with both its text (for BM25 lexical scoring) and
+  # its dense vector (for k-NN similarity). Keeping both in one engine means
+  # hybrid retrieval is one system to operate, not two. See ADR-0004.
+  opensearch:
+    image: opensearchproject/opensearch:2.19.6
+    container_name: paper-curator-opensearch
+    restart: unless-stopped
+    environment:
+      - cluster.name=paper-curator
+      - node.name=opensearch-node1
+      # A single node has no peers to elect a master from; this tells OpenSearch
+      # to skip cluster formation entirely.
+      - discovery.type=single-node
+      # Stop the JVM heap being swapped to disk, which would destroy latency.
+      - bootstrap.memory_lock=true
+      - OPENSEARCH_JAVA_OPTS=${OPENSEARCH_JAVA_OPTS:--Xms1g -Xmx1g}
+      - DISABLE_INSTALL_DEMO_CONFIG=true
+      # SECURITY NOTE: the security plugin is disabled, so there is no TLS and
+      # no authentication. This is acceptable ONLY because the port is published
+      # to localhost on a development machine. The AWS deployment uses Amazon
+      # OpenSearch Service with TLS and fine-grained access control instead.
+      - DISABLE_SECURITY_PLUGIN=true
+    ulimits:
+      # Required for bootstrap.memory_lock above.
+      memlock:
+        soft: -1
+        hard: -1
+      # Lucene keeps many files open; the default limit is far too low.
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - "${OPENSEARCH_HOST_PORT:-9200}:9200"
+      - "${OPENSEARCH_PERF_PORT:-9600}:9600"
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    healthcheck:
+      # "red" means shards are unassigned. A single-node cluster reports
+      # "yellow" as normal, because replica shards can never be allocated with
+      # no second node -- so yellow must count as healthy here.
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      # The JVM plus plugin loading genuinely takes this long on a cold start.
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          # 1 GB heap plus JVM overhead, Lucene's off-heap memory and the OS
+          # page cache it relies on for fast segment reads.
+          memory: 2G
+
+  # ---------------------------------------------------------------------------
+  # OpenSearch Dashboards -- optional web UI (profile: search-ui).
+  # ---------------------------------------------------------------------------
+  # Not needed to run the application. Useful for inspecting index mappings,
+  # checking what a chunk document actually looks like, and hand-running queries
+  # while debugging retrieval in Phase 2.
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.19.6
+    container_name: paper-curator-dashboards
+    profiles: ["search-ui"]
+    restart: unless-stopped
+    environment:
+      - OPENSEARCH_HOSTS=["http://opensearch:9200"]
+      # Must match the disabled security plugin on the OpenSearch container,
+      # otherwise Dashboards renders a login screen that can never succeed.
+      - DISABLE_SECURITY_DASHBOARDS_PLUGIN=true
+    ports:
+      - "${OPENSEARCH_DASHBOARDS_PORT:-5601}:5601"
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:5601/api/status || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  # ---------------------------------------------------------------------------
+  # Ollama -- local LLM serving (profile: llm).
+  # ---------------------------------------------------------------------------
+  # Runs the model that turns retrieved context into a grounded answer. Kept
+  # behind a profile because a loaded 3B model costs about 3 GB of RAM, and most
+  # development work (ingestion, retrieval, evaluation of retrieval) needs no
+  # LLM at all.
+  #
+  # After starting, pull the model once -- it persists in the named volume:
+  #   docker-compose --profile llm exec ollama ollama pull llama3.2:3b
+  ollama:
+    image: ollama/ollama:0.33.2
+    container_name: paper-curator-ollama
+    profiles: ["llm"]
+    restart: unless-stopped
+    environment:
+      # Unload the model from memory after 5 minutes idle, so a forgotten
+      # container does not hold 3 GB hostage.
+      - OLLAMA_KEEP_ALIVE=5m
+      # This machine has an integrated Intel GPU with no CUDA support, so
+      # inference is CPU-only. One concurrent request keeps latency predictable.
+      - OLLAMA_NUM_PARALLEL=1
+    ports:
+      - "${OLLAMA_HOST_PORT:-11434}:11434"
+    volumes:
+      # Model weights are large (~2 GB for a 3B model). Keeping them in a named
+      # volume means `docker-compose down` does not force a re-download.
+      - ollama-models:/root/.ollama
+    healthcheck:
+      # The image has no curl, so the ollama CLI is used to probe its own server.
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          # Model weights plus KV cache plus working memory.
+          memory: 6G
+
+# =============================================================================
+# Named volumes.
+#
+# Named volumes rather than bind mounts, for three reasons: Docker manages
+# permissions (bind-mounting a Windows directory into a Linux container causes
+# ownership problems Postgres refuses to start with), performance is far better
+# than crossing the Windows/WSL2 filesystem boundary, and data cannot be
+# accidentally committed to git.
+#
+# Inspect:  docker volume ls
+# Destroy:  docker-compose down -v          <-- irreversible
+# =============================================================================
+volumes:
+  postgres-data:
+    name: paper-curator-postgres-data
+  opensearch-data:
+    name: paper-curator-opensearch-data
+  ollama-models:
+    name: paper-curator-ollama-models
