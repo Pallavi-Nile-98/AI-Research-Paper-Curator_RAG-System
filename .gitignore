@@ -73,8 +73,12 @@ data/
 *.pdf
 !tests/fixtures/**/*.pdf          # small, checked-in test fixtures are allowed
 
-# Local model weights (embeddings, cross-encoder, Ollama blobs)
-models/
+# Local model weights (embeddings, cross-encoder, Ollama blobs).
+#
+# Leading slash matters: a bare `models/` matches at ANY depth, which silently
+# excluded src/paper_curator/db/models/ -- a source package. Anchoring to the
+# repository root keeps the rule to downloaded weights, which is what it means.
+/models/
 *.gguf
 *.safetensors
 *.bin
