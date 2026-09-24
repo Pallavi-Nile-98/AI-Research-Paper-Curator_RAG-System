@@ -1,0 +1,125 @@
+# =============================================================================
+# pre-commit: run checks automatically before each commit.
+#
+# This config does NOTHING until the git hook is installed once per clone:
+#
+#     .venv/Scripts/python.exe -m pre_commit install
+#
+# After that, every `git commit` (including from GitHub Desktop) runs the hooks
+# below against the STAGED files only. If any hook fails, the commit is blocked.
+#
+# Useful commands:
+#   Run against every file, not just staged:
+#     .venv/Scripts/python.exe -m pre_commit run --all-files
+#   Update all hooks to their latest versions:
+#     .venv/Scripts/python.exe -m pre_commit autoupdate
+#   Commit without running hooks (use sparingly, and never to hide a real failure):
+#     git commit --no-verify
+#
+# Note on auto-fixing hooks: several hooks below FIX the problem and then fail
+# the commit, so the fix lands in your working tree unstaged. That is intended,
+# not a bug -- it gives you a chance to review the change. Re-stage the files
+# and commit again.
+#
+# Why have this at all when CI runs the same checks? Because CI tells you about
+# a problem several minutes after you pushed it, in a pull request, in public.
+# A pre-commit hook tells you in two seconds, before it exists anywhere else.
+# =============================================================================
+
+# Hook versions are pinned. `autoupdate` moves them deliberately rather than
+# letting them drift, so a hook can never change behaviour without a commit.
+repos:
+
+  # ---------------------------------------------------------------------------
+  # General file hygiene and safety checks.
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      # --- Safety: these prevent damage that is painful to undo -------------
+      - id: detect-private-key
+        # This repository is public. A committed key must be treated as
+        # compromised and rotated -- deleting it later does not help, because
+        # it remains in the git history and in every clone.
+
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+        # Guards against committing a downloaded PDF, a model weight file, or a
+        # database dump. Git never forgets a large file; it stays in history and
+        # in everyone's clone forever. .gitignore already excludes these, but
+        # `git add -f` bypasses .gitignore and this does not.
+
+      - id: check-merge-conflict
+        # Catches `<<<<<<< HEAD` markers left in a file after a conflict.
+
+      # --- Correctness of structured files ---------------------------------
+      - id: check-yaml
+        # docker-compose.yml and the CI workflow. A YAML typo otherwise
+        # surfaces as a confusing runtime error rather than a parse error.
+      - id: check-toml
+        # pyproject.toml. A malformed pyproject breaks installation itself.
+      - id: check-json
+
+      # --- Filesystem portability ------------------------------------------
+      - id: check-case-conflict
+        # Catches filenames differing only in case (Readme.md vs README.md).
+        # Windows and macOS treat these as the same file; Linux does not -- so
+        # the repository works locally and breaks in CI and in containers.
+
+      # NOTE: `mixed-line-ending` is deliberately NOT enabled.
+      #
+      # It would rewrite the working tree to LF, which conflicts with how this
+      # repository already handles line endings. .gitattributes declares
+      # `* text=auto`, so Git stores LF in the repository regardless of
+      # platform, while core.autocrlf=true checks files out as CRLF on Windows.
+      # `git ls-files --eol` confirms the index is already LF.
+      #
+      # Adding the hook makes it rewrite every checked-out file on every clone,
+      # producing a permanent phantom diff. Line endings are a Git-level
+      # concern and .gitattributes is the right layer to enforce them.
+
+      # --- Whitespace hygiene ----------------------------------------------
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+        # Preserves the two-trailing-spaces line break that Markdown uses.
+      - id: end-of-file-fixer
+        # Ensures every file ends with exactly one newline, so diffs do not show
+        # a spurious "\ No newline at end of file".
+
+  # ---------------------------------------------------------------------------
+  # Ruff: lint and format Python. Replaces flake8, isort, black and pyupgrade.
+  # Configuration lives in pyproject.toml under [tool.ruff].
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.8
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+        # --fix repairs what it safely can (import order, unused imports) and
+        # leaves the rest to you. Unsafe fixes are never applied automatically.
+      - id: ruff-format
+        # Formatting is not a matter of taste here. It is decided once by the
+        # tool so that no diff ever contains a formatting argument.
+
+  # ---------------------------------------------------------------------------
+  # mypy: static type checking in strict mode.
+  # Configuration lives in pyproject.toml under [tool.mypy].
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v2.3.1
+    hooks:
+      - id: mypy
+        # mypy needs the project's dependencies to see their type information.
+        # pre-commit builds an isolated environment per hook, so they must be
+        # declared here as well as in pyproject.toml. Keep the two in step --
+        # a dependency missing here produces false "untyped import" errors.
+        additional_dependencies:
+          - pydantic>=2.9,<3
+          - pydantic-settings>=2.5,<3
+          - structlog>=24.4
+          - pytest>=8.3
+        # Check the whole project rather than only the staged files. Types are
+        # cross-file by nature: editing a function signature can break a caller
+        # in a file this commit does not touch. Per-file checking would miss it.
+        pass_filenames: false
+        args: []
