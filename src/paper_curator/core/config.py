@@ -213,6 +213,41 @@ class ArxivSettings(_BaseConfig):
     _split_categories = field_validator("categories", mode="before")(_split_csv)
 
 
+class ExtractionSettings(_BaseConfig):
+    """PDF download, text extraction and OCR fallback."""
+
+    model_config = SettingsConfigDict(env_prefix="EXTRACTION_")
+
+    # --- Download safety ---------------------------------------------------
+    max_pdf_bytes: int = Field(default=50 * 1024 * 1024, ge=1, description="Refuse anything larger")
+    download_timeout_seconds: float = Field(default=60.0, gt=0)
+    download_max_retries: int = Field(default=2, ge=0)
+    # PDF URLs come from the arXiv feed, which is third-party input. Restricting
+    # the hosts we will fetch from means a compromised or spoofed feed cannot
+    # redirect the downloader at an internal address -- a server-side request
+    # forgery. Empty disables the check.
+    allowed_pdf_hosts: StringList = Field(
+        default_factory=lambda: ["arxiv.org", "www.arxiv.org", "export.arxiv.org"]
+    )
+
+    # --- Quality and OCR fallback -----------------------------------------
+    # Below this score, extraction is considered poor. Whether OCR actually runs
+    # additionally depends on the text being sparse rather than merely garbled --
+    # OCR repairs a missing text layer, not a broken font encoding.
+    quality_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
+    ocr_enabled: bool = True
+    ocr_language: str = Field(default="eng", description="Tesseract language code")
+    # 200 DPI is the usual floor for reliable OCR of body text. Higher improves
+    # accuracy slightly and costs render time and memory roughly quadratically.
+    ocr_dpi: int = Field(default=200, ge=72, le=600)
+    # Bounds the cost of one bad document. OCR runs at seconds per page on a CPU,
+    # so an unbounded 300-page scan could occupy a worker for half an hour.
+    ocr_max_pages: int = Field(default=20, ge=1)
+    ocr_timeout_seconds: float = Field(default=300.0, gt=0)
+
+    _split_hosts = field_validator("allowed_pdf_hosts", mode="before")(_split_csv)
+
+
 class LangfuseSettings(_BaseConfig):
     """Optional LLM observability.
 
@@ -262,6 +297,7 @@ class Settings(_BaseConfig):
     embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
     reranker: RerankerSettings = Field(default_factory=RerankerSettings)
     arxiv: ArxivSettings = Field(default_factory=ArxivSettings)
+    extraction: ExtractionSettings = Field(default_factory=ExtractionSettings)
     langfuse: LangfuseSettings = Field(default_factory=LangfuseSettings)
     api: ApiSettings = Field(default_factory=ApiSettings)
 

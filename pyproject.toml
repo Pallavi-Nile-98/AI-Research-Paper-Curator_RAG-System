@@ -191,6 +191,33 @@ module = ["tests.*"]
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 
+[[tool.mypy.overrides]]
+# PyMuPDF and pytesseract ship a py.typed marker but annotate only part of their
+# API, so strict mode's disallow_untyped_calls fires on ordinary, correct usage
+# -- document.close(), pixmap.tobytes(), image_to_string(). The alternative is a
+# type: ignore comment on every call site, which is noise rather than safety.
+#
+# Scoped to the two modules that touch those libraries. Everything else,
+# including the service layer that orchestrates them, stays fully strict.
+module = [
+    "paper_curator.ingestion.extraction.pdf",
+    "paper_curator.ingestion.extraction.ocr",
+    # This test builds PDFs in memory with PyMuPDF rather than committing binary
+    # fixtures, so it calls the same partially-annotated API. Named explicitly
+    # rather than via "tests.*": the test tree has no __init__.py files, so mypy
+    # identifies modules by basename and a package-style pattern never matches.
+    "test_pdf_extraction",
+]
+disallow_untyped_calls = false
+
+[[tool.mypy.overrides]]
+# pytesseract ships no py.typed marker and has no stub package, so mypy cannot
+# see its API at all. Treated as untyped rather than stubbed by hand: it is a
+# thin wrapper around a command-line binary, and the wrapper around it here is
+# small enough to review directly.
+module = ["pytesseract.*"]
+ignore_missing_imports = true
+
 # =============================================================================
 # pytest
 # =============================================================================
