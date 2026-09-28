@@ -157,6 +157,11 @@ ignore = [
 "tests/**/*.py" = ["S101", "D100", "D101", "D104", "ANN201", "ANN001"]
 # Airflow DAG files are declarative configuration, not library code.
 "airflow/dags/**/*.py" = ["D100"]
+# Alembic writes these files, not a person. Their module docstring is built from
+# the revision message, and generated DDL lines routinely exceed the line limit.
+# Prose and formatting rules are relaxed so a routine migration does not require
+# hand-editing generated code; correctness rules (F, B, S) still apply.
+"migrations/versions/*.py" = ["D", "E501"]
 # Scripts are executable entry points, printing is their job. Subprocess use is
 # suppressed narrowly at the call site instead, so each instance stays justified.
 "scripts/**/*.py" = ["T20"]
