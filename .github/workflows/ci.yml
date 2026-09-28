@@ -39,7 +39,11 @@ env:
 jobs:
   quality:
     name: Lint, format and type check
-    runs-on: ubuntu-latest
+    # Pinned rather than `ubuntu-latest`. That label is a moving target: GitHub
+    # repoints it at a new Ubuntu release periodically, and when it does, a
+    # build can break for reasons unrelated to any code change. Pinning means
+    # the runner image changes only when this line does.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Check out repository
@@ -72,7 +76,11 @@ jobs:
 
   test:
     name: Unit tests
-    runs-on: ubuntu-latest
+    # Pinned rather than `ubuntu-latest`. That label is a moving target: GitHub
+    # repoints it at a new Ubuntu release periodically, and when it does, a
+    # build can break for reasons unrelated to any code change. Pinning means
+    # the runner image changes only when this line does.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Check out repository
