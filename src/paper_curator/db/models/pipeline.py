@@ -188,6 +188,38 @@ class DocumentProcessingStatus(Base, TimestampMixin):
         """True when this document has used its full retry budget."""
         return self.attempts >= self.max_attempts
 
+    @property
+    def is_settled(self) -> bool:
+        """True when this document needs no further work, either way.
+
+        Indexed successfully, permanently failed, or deliberately skipped.
+        Anything else is unfinished and should be picked up again.
+        """
+        return self.stage in {
+            ProcessingStage.INDEXED,
+            ProcessingStage.FAILED,
+            ProcessingStage.SKIPPED,
+        }
+
+    def is_due(self, now: dt.datetime) -> bool:
+        """Whether the backoff window has elapsed.
+
+        ``next_retry_at`` stores backoff as data rather than as a sleeping
+        process, so a pending retry survives a restart. A document with no
+        scheduled time has never failed and is due immediately.
+        """
+        return self.next_retry_at is None or self.next_retry_at <= now
+
+    def needs_work(self, now: dt.datetime) -> bool:
+        """Whether this document should be processed on this run.
+
+        The question the pipeline must ask about an already-stored paper.
+        Asking instead whether the paper row is *new* leaves anything stored
+        but unprocessed stranded forever -- and makes the attempts and
+        next_retry_at columns write-only.
+        """
+        return not self.is_settled and not self.retries_exhausted and self.is_due(now)
+
     def __repr__(self) -> str:
         return f"<Status paper={self.paper_id} {self.stage} attempts={self.attempts}>"
 

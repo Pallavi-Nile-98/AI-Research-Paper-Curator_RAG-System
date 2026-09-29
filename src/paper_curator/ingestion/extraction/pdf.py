@@ -14,6 +14,7 @@ tested against plain strings without constructing a PDF.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 import pymupdf
@@ -26,6 +27,24 @@ logger = get_logger(__name__)
 # A page with fewer characters than this has, in practice, no usable text layer:
 # typically just a page number or a header left behind by a scanner.
 _MEANINGFUL_PAGE_CHARS = 50
+
+# Control characters that must not survive extraction.
+#
+# NUL is the one that actually breaks things: PostgreSQL text columns cannot
+# store 0x00 at all, and some PDFs -- older ones especially -- embed them.
+# PyMuPDF passes them through, so without this the extraction succeeds, the
+# chunking succeeds, and the INSERT fails with "invalid byte sequence for
+# encoding UTF8", which reads like a database problem rather than a PDF one.
+#
+# The rest of the C0 range and DEL carry no meaning in extracted prose and only
+# corrupt tokenisation. Tab, newline, carriage return and form feed are kept:
+# form feed in particular marks page boundaries that chunking relies on.
+_ILLEGAL_CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0e-\x1f\x7f]")
+
+
+def sanitize_extracted_text(text: str) -> str:
+    """Remove control characters that cannot be stored or indexed."""
+    return _ILLEGAL_CONTROL_CHARS.sub("", text)
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,7 +114,9 @@ def extract_text(data: bytes) -> PdfExtraction:
         # iterable at runtime, but PyMuPDF's bundled annotations do not declare
         # __iter__, so the loop form fails type checking for no real benefit.
         for index in range(document.page_count):
-            page_text = document[index].get_text()
+            # Sanitised per page, before anything measures or stores it, so no
+            # downstream stage ever sees a character it cannot handle.
+            page_text = sanitize_extracted_text(document[index].get_text())
             page_texts.append(page_text)
             page_char_counts.append(len(page_text.strip()))
 
