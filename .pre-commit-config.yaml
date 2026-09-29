@@ -137,7 +137,11 @@ repos:
           - respx>=0.21
           - pymupdf>=1.24
           - pillow>=10.4
+          - opensearch-py[async]>=2.7
           - types-defusedxml>=0.7
+        # tests/unit/test_tooling_config.py fails if this list drifts from
+        # pyproject.toml, so the mismatch is caught by the test suite rather
+        # than by a confusing hook failure at commit time.
         # Check the whole project rather than only the staged files. Types are
         # cross-file by nature: editing a function signature can break a caller
         # in a file this commit does not touch. Per-file checking would miss it.

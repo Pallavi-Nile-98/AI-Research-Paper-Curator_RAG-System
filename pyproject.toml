@@ -70,7 +70,10 @@ dependencies = [
     "pillow>=10.4",      # image handling for the OCR path
 
     # --- Search -------------------------------------------------------------
-    "opensearch-py>=2.7",
+    # The [async] extra pulls in aiohttp. Without it opensearch-py does not
+    # export AsyncOpenSearch at all -- the async client simply is not there,
+    # and the import fails rather than degrading to a synchronous one.
+    "opensearch-py[async]>=2.7",
 ]
 
 [project.optional-dependencies]
@@ -218,6 +221,15 @@ disallow_untyped_calls = false
 module = ["pytesseract.*"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+# sentence-transformers lives in the optional [ml] extra and pulls in PyTorch,
+# roughly 2 GB. Installing that into the pre-commit mypy environment to satisfy
+# one lazily-imported symbol would make every commit slow for no real benefit.
+# The import is already inside a try/except that reports a clear message when
+# the extra is absent, so its absence is handled rather than assumed away.
+module = ["sentence_transformers.*"]
+ignore_missing_imports = true
+
 # =============================================================================
 # pytest
 # =============================================================================
@@ -241,8 +253,16 @@ markers = [
 # decorator on each one. Most of this codebase is async I/O, so the alternative
 # means repeating @pytest.mark.asyncio on nearly every test.
 asyncio_mode = "auto"
-# Turn warnings into failures so deprecations are caught early, not at upgrade time.
-filterwarnings = ["error"]
+# Turn warnings into failures so deprecations are caught early, not at upgrade
+# time. Exceptions are listed individually and must each carry a reason -- a
+# blanket "ignore" would defeat the point.
+filterwarnings = [
+    "error",
+    # opensearch-py passes enable_cleanup_closed to aiohttp, which no longer
+    # needs it on Python 3.13 and warns. Neither library is ours to change, and
+    # the warning says nothing about this project's code.
+    "ignore:enable_cleanup_closed ignored:DeprecationWarning",
+]
 
 # =============================================================================
 # Coverage
