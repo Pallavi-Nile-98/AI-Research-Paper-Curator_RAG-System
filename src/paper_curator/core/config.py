@@ -248,6 +248,51 @@ class ExtractionSettings(_BaseConfig):
     _split_hosts = field_validator("allowed_pdf_hosts", mode="before")(_split_csv)
 
 
+class ChunkingSettings(_BaseConfig):
+    """How a paper's text is split into retrievable passages.
+
+    These values are the main knob for retrieval quality and are deliberately
+    configurable: Phase 2 tunes them by measurement rather than by intuition.
+    Because the full extracted text is kept in PostgreSQL (ADR-0002),
+    re-chunking with different values reads a column instead of re-downloading
+    every PDF.
+    """
+
+    model_config = SettingsConfigDict(env_prefix="CHUNKING_")
+
+    # 512 matches the input limit of the default embedding model. A chunk longer
+    # than the model can read gets silently truncated, so the tail would be
+    # indexed but never actually contribute to its own embedding.
+    max_tokens: int = Field(default=512, ge=32, le=8192)
+    # Chunks below this are usually headings, page numbers or stray fragments.
+    # They match noisily and dilute retrieval.
+    min_tokens: int = Field(default=50, ge=1)
+    # Carried from the end of one chunk into the start of the next, so a passage
+    # split across a boundary is still findable from either side.
+    overlap_tokens: int = Field(default=64, ge=0)
+
+    # References are citation lists: dense with author names and titles that
+    # match many queries for the wrong reason. Excluded by default, but
+    # configurable because "which papers cite X" is a legitimate question.
+    include_references: bool = False
+    # Appendices carry real content -- proofs, extra results, hyperparameters --
+    # so they are kept by default and flagged rather than dropped.
+    include_appendix: bool = True
+
+    # Cap on chunks from one paper, so a pathological document cannot dominate
+    # the index or one ingestion run.
+    max_chunks_per_paper: int = Field(default=500, ge=1)
+
+    @property
+    def effective_overlap(self) -> int:
+        """Overlap clamped to something smaller than a whole chunk.
+
+        Overlap at or above max_tokens would make each chunk start where the
+        previous one started, so the chunker would never advance.
+        """
+        return min(self.overlap_tokens, self.max_tokens // 2)
+
+
 class LangfuseSettings(_BaseConfig):
     """Optional LLM observability.
 
@@ -298,6 +343,7 @@ class Settings(_BaseConfig):
     reranker: RerankerSettings = Field(default_factory=RerankerSettings)
     arxiv: ArxivSettings = Field(default_factory=ArxivSettings)
     extraction: ExtractionSettings = Field(default_factory=ExtractionSettings)
+    chunking: ChunkingSettings = Field(default_factory=ChunkingSettings)
     langfuse: LangfuseSettings = Field(default_factory=LangfuseSettings)
     api: ApiSettings = Field(default_factory=ApiSettings)
 
