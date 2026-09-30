@@ -66,6 +66,16 @@ class EmbeddingProvider(Protocol):
         """
         ...
 
+    def warmup(self) -> None:
+        """Do any expensive one-off setup now rather than on first use.
+
+        Part of the protocol so callers need not know whether a provider loads
+        a model. Benchmarks must call it: loading takes tens of seconds while
+        embedding takes milliseconds, so an unwarmed first query reports a
+        latency that is almost entirely model loading.
+        """
+        ...
+
 
 class FakeEmbeddingProvider:
     """Deterministic embeddings derived from a hash, for tests.
@@ -114,3 +124,6 @@ class FakeEmbeddingProvider:
         # vectors, mirroring the asymmetry of the real model. A test that
         # accidentally embeds a query as a document then shows a difference.
         return self._vector(text, prefix="query: ")
+
+    def warmup(self) -> None:
+        """No-op: there is nothing to load."""

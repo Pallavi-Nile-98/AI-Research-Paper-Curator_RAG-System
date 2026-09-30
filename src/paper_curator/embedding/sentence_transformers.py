@@ -84,7 +84,14 @@ class SentenceTransformerEmbeddingProvider:
         """
         if self._model is None:
             return self._configured_dimensions
-        actual = int(self._model.get_sentence_embedding_dimension())
+        # Renamed in newer sentence-transformers; the old name still works but
+        # warns. Preferring the new one keeps the warning out of measurement
+        # output and survives the eventual removal.
+        reader = (
+            getattr(self._model, "get_embedding_dimension", None)
+            or self._model.get_sentence_embedding_dimension
+        )
+        actual = int(reader())
         if actual != self._configured_dimensions:
             msg = (
                 f"model {self._model_name!r} produces {actual}-dimensional vectors "
@@ -144,3 +151,20 @@ class SentenceTransformerEmbeddingProvider:
         """Embed a search query, applying the instruction prefix if required."""
         prepared = f"{BGE_QUERY_PREFIX}{text}" if self._uses_query_prefix else text
         return self._encode([prepared])[0]
+
+    def warmup(self) -> None:
+        """Load the model now, so it is not loaded during a timed operation.
+
+        Loading takes tens of seconds; embedding a query afterwards takes
+        milliseconds. Without an explicit warmup the first measured query
+        carries the load cost, which would put a ~58,000 ms outlier at the
+        front of every benchmark and make the reported latency meaningless.
+
+        Called by the evaluation runner before timing anything, and worth
+        calling at API startup so the first user request is not the one that
+        pays.
+        """
+        self._load()
+        # Exercise the full encode path too: the first forward pass allocates
+        # buffers and is measurably slower than the ones after it.
+        self._encode(["warmup"])

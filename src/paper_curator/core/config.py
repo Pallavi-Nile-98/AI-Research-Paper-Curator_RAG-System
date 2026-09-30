@@ -180,6 +180,56 @@ class EmbeddingSettings(_BaseConfig):
     normalize: bool = True
 
 
+class RetrievalSettings(_BaseConfig):
+    """How candidates are found and combined.
+
+    These are the parameters Phase 2 measures. They are configuration rather
+    than constants precisely so a comparison between settings is a config
+    change and a recorded experiment, not a code edit.
+    """
+
+    model_config = SettingsConfigDict(env_prefix="RETRIEVAL_")
+
+    mode: Literal["keyword", "vector", "hybrid"] = "hybrid"
+
+    top_k: int = Field(default=10, ge=1, le=100, description="Results returned to the caller")
+    # Each retriever fetches more than top_k so fusion and re-ranking have
+    # something to work with. Fusing two lists of 10 can only ever surface
+    # those 10; a wider pool is what lets a document ranked 30th by one
+    # retriever and 3rd by the other reach the final list.
+    candidate_pool_size: int = Field(default=50, ge=1, le=500)
+
+    # --- BM25 field weighting ---------------------------------------------
+    # The index stores text twice: stemmed for recall, unstemmed for exact
+    # terminology (see search/mapping.py). These decide how much each counts.
+    bm25_text_boost: float = Field(default=1.0, ge=0.0)
+    bm25_exact_boost: float = Field(default=1.5, ge=0.0)
+    # A query term appearing in the title is strong evidence the whole paper is
+    # about it, not merely that the phrase occurs somewhere.
+    bm25_title_boost: float = Field(default=2.0, ge=0.0)
+
+    # --- Fusion -------------------------------------------------------------
+    fusion_method: Literal["rrf", "weighted"] = "rrf"
+    # The constant in 1/(k + rank). Larger values flatten the curve, reducing
+    # how much the very top ranks dominate. 60 is the value from the original
+    # RRF paper and the usual default.
+    rrf_k: int = Field(default=60, ge=1)
+    # Used only by weighted fusion, which normalises scores before combining.
+    # Ignored under RRF, which uses rank position alone.
+    keyword_weight: float = Field(default=0.5, ge=0.0, le=1.0)
+    vector_weight: float = Field(default=0.5, ge=0.0, le=1.0)
+
+    # --- Result shaping -----------------------------------------------------
+    # Caps how much of the final context one paper may occupy. Without it a
+    # single highly relevant paper can fill every slot, and a question needing
+    # two sources gets one source eight times.
+    max_chunks_per_paper: int = Field(default=3, ge=1)
+    # Near-duplicate passages waste context budget. Chunk overlap guarantees
+    # some adjacent pairs share text by construction.
+    deduplicate: bool = True
+    duplicate_similarity_threshold: float = Field(default=0.9, ge=0.0, le=1.0)
+
+
 class RerankerSettings(_BaseConfig):
     """Cross-encoder re-ranking applied to the fused candidate pool."""
 
@@ -340,6 +390,7 @@ class Settings(_BaseConfig):
     opensearch: OpenSearchSettings = Field(default_factory=OpenSearchSettings)
     ollama: OllamaSettings = Field(default_factory=OllamaSettings)
     embedding: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
+    retrieval: RetrievalSettings = Field(default_factory=RetrievalSettings)
     reranker: RerankerSettings = Field(default_factory=RerankerSettings)
     arxiv: ArxivSettings = Field(default_factory=ArxivSettings)
     extraction: ExtractionSettings = Field(default_factory=ExtractionSettings)
