@@ -229,6 +229,14 @@ class RetrievalSettings(_BaseConfig):
     deduplicate: bool = True
     duplicate_similarity_threshold: float = Field(default=0.9, ge=0.0, le=1.0)
 
+    # --- Context assembly ---------------------------------------------------
+    # Tokens of retrieved evidence allowed into the prompt. Bounded because the
+    # model has a finite context window that also has to hold the system
+    # prompt, the question and the answer -- and because more context is not
+    # uniformly better: a model given twenty passages attends worse to the
+    # relevant two than one given four.
+    context_token_budget: int = Field(default=3000, ge=200)
+
 
 class RerankerSettings(_BaseConfig):
     """Cross-encoder re-ranking applied to the fused candidate pool."""

@@ -23,6 +23,7 @@ from opensearchpy import AsyncOpenSearch
 
 from paper_curator.core.config import Settings, get_settings
 from paper_curator.embedding import EmbeddingProvider
+from paper_curator.retrieval.context import AssembledContext, Citation, ContextBuilder
 from paper_curator.retrieval.fusion import (
     deduplicate_chunks,
     limit_per_paper,
@@ -38,11 +39,26 @@ from paper_curator.retrieval.models import (
     RetrieverContribution,
     RetrieverKind,
 )
+from paper_curator.retrieval.reranking import (
+    CrossEncoderReranker,
+    IdentityReranker,
+    Reranker,
+    RerankingService,
+    RerankOutcome,
+)
 from paper_curator.retrieval.vector import VectorRetriever
 
 __all__ = [
+    "AssembledContext",
+    "Citation",
+    "ContextBuilder",
+    "CrossEncoderReranker",
     "HybridRetriever",
+    "IdentityReranker",
     "KeywordRetriever",
+    "RerankOutcome",
+    "Reranker",
+    "RerankingService",
     "RetrievalFilters",
     "RetrievalResult",
     "RetrievedChunk",
