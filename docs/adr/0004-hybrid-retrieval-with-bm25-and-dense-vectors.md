@@ -2,11 +2,19 @@
 
 | | |
 |---|---|
-| **Status** | Accepted |
+| **Status** | Superseded |
 | **Date** | 2026-09-24 |
 | **Deciders** | Pallavi Nile |
 | **Supersedes** | — |
-| **Superseded by** | — |
+| **Superseded by** | [ADR-0008](0008-measured-retrieval-results-supersede-the-hybrid-hypothesis.md) |
+
+> **Superseded on 2026-10-04 by [ADR-0008](0008-measured-retrieval-results-supersede-the-hybrid-hypothesis.md).**
+> The experiment this ADR committed to was run. The **mechanism** described
+> below was confirmed: BM25 does collapse on vocabulary mismatch (recall@10
+> 0.400 against dense retrieval's 0.800). The **conclusion** was not: dense
+> retrieval alone led every headline metric, and hybrid did not win. The text
+> below is left exactly as written, because a prediction edited after the result
+> is no longer a prediction. Read ADR-0008 for what was measured.
 
 ## Context
 

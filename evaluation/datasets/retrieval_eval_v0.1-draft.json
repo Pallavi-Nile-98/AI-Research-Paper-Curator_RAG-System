@@ -1,0 +1,308 @@
+{
+  "version": "0.1.0-draft",
+  "created": "2026-10-04",
+  "corpus_description": "124 arXiv papers, predominantly cs.IR, mostly submitted January 2024, indexed as 4,931 chunks. Questions were written against this specific corpus and are not portable to another one.",
+  "notes": "EVERY LABEL IN THIS FILE IS AN UNREVIEWED DRAFT. Each was proposed by reading the paper's abstract and judging whether it plausibly answers the question. That is a weaker standard than reading the paper. Known limitations: (1) relevance is judged at paper level, not chunk level, because trustworthy chunk-level labels would require a human decision on each of 4,931 chunks; (2) labels drawn from abstracts can miss a paper that answers a question in its body but not its abstract, which inflates apparent precision and understates recall; (3) multi_source examples assume no single paper suffices, which was judged from abstracts alone. Until 'reviewed' is true on an example, any metric computed from it is provisional and must be reported as such.",
+  "examples": [
+    {
+      "id": "q001",
+      "query": "What is DREQ?",
+      "category": "exact_terminology",
+      "relevant_arxiv_ids": ["2401.05939"],
+      "relevant_sections": ["Abstract"],
+      "notes": "DREQ is named in the title as an entity-oriented dense document re-ranking model. A bare acronym is the clearest case where lexical matching should beat embeddings, since an acronym has little semantic content.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q002",
+      "query": "DocGraphLM documental graph language model",
+      "category": "exact_terminology",
+      "relevant_arxiv_ids": ["2401.02823"],
+      "relevant_sections": ["Abstract"],
+      "notes": "Exact system name from the title. Tests whether a coined compound token survives the stemming analyzer.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q003",
+      "query": "expected transaction value optimization for precise marketing",
+      "category": "exact_terminology",
+      "relevant_arxiv_ids": ["2401.01525"],
+      "relevant_sections": ["Abstract"],
+      "notes": "Near-verbatim title phrase. Establishes a ceiling: if lexical retrieval cannot find this, something is wrong with the index rather than with the method.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q004",
+      "query": "plug-in diffusion model for sequential recommendation",
+      "category": "exact_terminology",
+      "relevant_arxiv_ids": ["2401.02913"],
+      "relevant_sections": ["Abstract"],
+      "notes": "Title phrase. The abstract confirms diffusion models applied to recommendation rather than image synthesis.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q005",
+      "query": "learning to rank with nested feedback",
+      "category": "exact_terminology",
+      "relevant_arxiv_ids": ["2401.04053"],
+      "relevant_sections": ["Abstract"],
+      "notes": "Title phrase. The abstract describes ranked lists on web platforms and nested interfaces.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q006",
+      "query": "How can language models help when there is not enough training data to train a ranker?",
+      "category": "conceptual",
+      "relevant_arxiv_ids": ["2401.01566"],
+      "relevant_sections": ["Abstract"],
+      "notes": "The abstract states they employ ChatGPT to generate training data precisely because neural rankers lack it. The question paraphrases that problem rather than naming the method.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q007",
+      "query": "What makes it difficult to trust answers produced by a language model?",
+      "category": "conceptual",
+      "relevant_arxiv_ids": ["2401.01780", "2401.01825"],
+      "relevant_sections": ["Abstract"],
+      "notes": "2401.01780 states LLMs remain prone to hallucination on factual questions. 2401.01825 states they generate plausible yet incorrect text, which constrains real-world use. Both address the question from different angles.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q008",
+      "query": "How do online stores suggest the right clothing size to a shopper?",
+      "category": "conceptual",
+      "relevant_arxiv_ids": ["2401.01978"],
+      "relevant_sections": ["Abstract"],
+      "notes": "The abstract describes personalized size recommendations for high-end fashion marketplaces. The question avoids the words size recommendation.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q009",
+      "query": "How can newly released music be surfaced to listeners who have not heard of it?",
+      "category": "conceptual",
+      "relevant_arxiv_ids": ["2401.02827"],
+      "relevant_sections": ["Abstract"],
+      "notes": "The abstract describes fostering discoverability of new releases on Deezer and a shift from editorial to personalised approaches.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q010",
+      "query": "What happens when someone deliberately corrupts the data a recommendation system learns from?",
+      "category": "conceptual",
+      "relevant_arxiv_ids": ["2401.01527"],
+      "relevant_sections": ["Abstract"],
+      "notes": "The abstract defines poisoning attacks as injecting malicious data into recommender training sets. The question describes the mechanism without naming it.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q011",
+      "query": "How do you pull structured information out of documents with complicated layouts?",
+      "category": "conceptual",
+      "relevant_arxiv_ids": ["2401.02823"],
+      "relevant_sections": ["Abstract"],
+      "notes": "The abstract describes information extraction and question answering over documents with complex layouts, under Visually Rich Document Understanding.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q012",
+      "query": "How is multilingual search affected by content that mixes human and machine writing?",
+      "category": "conceptual",
+      "relevant_arxiv_ids": ["2401.01511"],
+      "relevant_sections": ["Abstract"],
+      "notes": "Title and abstract concern multilingual information retrieval in mixed human and machine generated content.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q013",
+      "query": "How do transformer-based and graph-based approaches to document understanding compare?",
+      "category": "method_comparison",
+      "relevant_arxiv_ids": ["2401.02823"],
+      "relevant_sections": ["Abstract"],
+      "notes": "The abstract explicitly contrasts two tropes of architectures, transformer-based and graph-based. A single-paper comparison, which is why only one paper is labelled.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q014",
+      "query": "What are the different ways of evaluating answers a language model generates directly?",
+      "category": "method_comparison",
+      "relevant_arxiv_ids": ["2401.04842", "2401.01711"],
+      "relevant_sections": ["Abstract"],
+      "notes": "2401.04842 adapts standard retrieval benchmarks to evaluate generated answers. 2401.01711 evaluates LLMs on semantic parsing for conversational QA. Both concern evaluating generated output, by different means.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q015",
+      "query": "Compare re-ranking documents using entities against re-ranking by vector similarity",
+      "category": "method_comparison",
+      "relevant_arxiv_ids": ["2401.05939", "2401.01835"],
+      "relevant_sections": ["Abstract"],
+      "notes": "2401.05939 is entity-oriented dense re-ranking; 2401.01835 uses a vector-space driven re-ranking mechanism. Neither compares itself to the other, so answering this needs both.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q016",
+      "query": "What approaches exist for reducing hallucination in question answering systems?",
+      "category": "method_comparison",
+      "relevant_arxiv_ids": ["2401.01780", "2401.01825"],
+      "relevant_sections": ["Abstract"],
+      "notes": "2401.01780 optimises API dependency to address hallucination. 2401.01825 constrains an LLM advisor because of plausible but incorrect output. Different mitigations for the same failure.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q017",
+      "query": "What did team IELAB do for the TREC Clinical Trials track in 2023?",
+      "category": "paper_specific",
+      "relevant_arxiv_ids": ["2401.01566"],
+      "relevant_sections": ["Abstract"],
+      "notes": "Names the team, the track and the year, all present in the title and abstract.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q018",
+      "query": "What does the Tailor system do for fashion marketplaces?",
+      "category": "paper_specific",
+      "relevant_arxiv_ids": ["2401.01978"],
+      "relevant_sections": ["Abstract"],
+      "notes": "Named system from the title. Tailor is also an ordinary English word, so this tests whether the system name is matched rather than the generic sense.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q019",
+      "query": "What is Physio and what is it used for?",
+      "category": "paper_specific",
+      "relevant_arxiv_ids": ["2401.01825"],
+      "relevant_sections": ["Abstract"],
+      "notes": "Named system: an LLM-based physiotherapy advisor.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q020",
+      "query": "arXiv 2401.05939",
+      "category": "paper_specific",
+      "relevant_arxiv_ids": ["2401.05939"],
+      "relevant_sections": [],
+      "notes": "A bare identifier. The clearest possible case for lexical retrieval and the clearest failure case for embeddings, since an identifier has no semantic neighbourhood. Expected to separate the two retrievers sharply.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q021",
+      "query": "What are the risks of using AI systems in healthcare?",
+      "category": "multi_source",
+      "relevant_arxiv_ids": ["2401.01825", "2401.03631"],
+      "relevant_sections": ["Abstract"],
+      "notes": "2401.01825 concerns an LLM physiotherapy advisor and the constraint of incorrect output. 2401.03631 evaluates an AI-assisted platform for mental health provision. Neither alone covers healthcare risk broadly.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q022",
+      "query": "How is fairness or trustworthiness assessed for automated systems?",
+      "category": "multi_source",
+      "relevant_arxiv_ids": ["2401.04057", "2401.01781"],
+      "relevant_sections": ["Abstract"],
+      "notes": "2401.04057 examines bias in fairness evaluations of LLMs. 2401.01781 evaluates trustworthiness of online news publishers. Two distinct senses of the question.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q023",
+      "query": "What techniques improve retrieval in specialised professional domains such as law or medicine?",
+      "category": "multi_source",
+      "relevant_arxiv_ids": ["2401.04852", "2401.01566"],
+      "relevant_sections": ["Abstract"],
+      "notes": "2401.04852 addresses legal answer retrieval and the knowledge gap between lawyers and laypeople. 2401.01566 addresses clinical trial retrieval. Each covers one domain only.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q024",
+      "query": "How are large language models being evaluated as information retrieval systems?",
+      "category": "multi_source",
+      "relevant_arxiv_ids": ["2401.04842", "2401.01711", "2401.04057"],
+      "relevant_sections": ["Abstract"],
+      "notes": "Three papers on evaluating LLMs from different angles: adapting retrieval benchmarks, semantic parsing for conversational QA, and bias in fairness evaluation.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q025",
+      "query": "In what ways can recommender systems be manipulated or produce unfair outcomes?",
+      "category": "multi_source",
+      "relevant_arxiv_ids": ["2401.01527", "2401.04057"],
+      "relevant_sections": ["Abstract"],
+      "notes": "2401.01527 surveys poisoning attacks; 2401.04057 concerns bias in fairness evaluation. Manipulation and unfairness are distinct failures and no single paper covers both.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q026",
+      "query": "Why do chatbots sometimes make things up?",
+      "category": "vocabulary_mismatch",
+      "relevant_arxiv_ids": ["2401.01780", "2401.01825"],
+      "relevant_sections": ["Abstract"],
+      "notes": "The corpus says hallucination and plausible yet incorrect text; the query says make things up and chatbots, neither of which appears. A direct test of whether dense retrieval bridges the gap where BM25 cannot.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q027",
+      "query": "How can a computer work out whether a news website is reliable?",
+      "category": "vocabulary_mismatch",
+      "relevant_arxiv_ids": ["2401.01781"],
+      "relevant_sections": ["Abstract"],
+      "notes": "The corpus says trustworthiness of online news publishers; the query says reliable and news website. Reliable and trustworthy share no stem.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q028",
+      "query": "Working out what clothes will fit a person buying over the internet",
+      "category": "vocabulary_mismatch",
+      "relevant_arxiv_ids": ["2401.01978"],
+      "relevant_sections": ["Abstract"],
+      "notes": "The corpus says size recommendations for high-end fashion marketplaces. The query avoids size, recommendation and fashion entirely.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q029",
+      "query": "Teaching software to put search results in a better order by observing what people click",
+      "category": "vocabulary_mismatch",
+      "relevant_arxiv_ids": ["2401.04053"],
+      "relevant_sections": ["Abstract"],
+      "notes": "The corpus says learning-to-rank and nested feedback; the query describes the mechanism in plain words. Note that order and rank are distinct terms lexically.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    },
+    {
+      "id": "q030",
+      "query": "Somebody deliberately feeding false information into a shopping site's suggestion engine",
+      "category": "vocabulary_mismatch",
+      "relevant_arxiv_ids": ["2401.01527"],
+      "relevant_sections": ["Abstract"],
+      "notes": "The corpus says poisoning attacks against recommender systems; the query says feeding false information and suggestion engine. Tests paraphrase of both the attack and the system.",
+      "label_source": "drafted_from_abstract",
+      "reviewed": false
+    }
+  ]
+}
